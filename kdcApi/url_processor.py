@@ -14,7 +14,7 @@ class takeUrl:
         body = soup.body
         if body:
             soup = BeautifulSoup(str(body), 'html.parser')
-        for script_or_style in soup(['script', 'style']):
+        for script_or_style in soup(['script', 'style']):  # isn't
             script_or_style.decompose()
         
         return soup.get_text()
