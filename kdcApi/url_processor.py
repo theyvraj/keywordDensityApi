@@ -7,18 +7,18 @@ from collections import Counter
 import re
 class takeUrl:
     def __init__(self):
-        pass
-    stop_words = set(stopwords.words('english'))    
+        self.stop_words = set(stopwords.words('english'))
+        self.word_pattern = re.compile(r"\b[a-zA-Z]+'?[a-zA-Z]{1,}\b")       
     def clean_html(self, soup):
         body = soup.body
         if body:
-            soup = BeautifulSoup(str(body), 'html.parser')
+            soup = BeautifulSoup(str(body), 'lxml')
         for script_or_style in soup(['script', 'style']):
             script_or_style.decompose()
         
         return soup.get_text()
     def get_keywords(self, text, stop_words):
-        words = re.findall(r"\b[a-zA-Z]+'?[a-zA-Z]{1,}\b", text.lower())    
+        words = self.word_pattern.findall(text.lower())    
         words = [word for word in words if word not in stop_words]    
         return words  
     def get_phrases(self, words, n):
@@ -26,7 +26,7 @@ class takeUrl:
     def process_url(self, url):
         response = requests.get(url)
         html = response.text
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, 'lxml')
         cleaned_text = self.clean_html(soup)
         words = self.get_keywords(cleaned_text, self.stop_words)
         total_words = len(words)
