@@ -13,3 +13,5 @@ kwdc/__pycache__/__init__.cpython-313.pyc
 kwdc/__pycache__/settings.cpython-313.pyc
 kwdc/__pycache__/urls.cpython-313.pyc
 kwdc/__pycache__/wsgi.cpython-313.pyc
+
+kdcApi/__pycache__/url_processor.cpython-313.pyc

@@ -5,7 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 from collections import Counter
 import re
-import pytrends
 class takeUrl:
     def __init__(self):
         pass
