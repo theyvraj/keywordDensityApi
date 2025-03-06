@@ -20,9 +20,9 @@ class OptimizedUrlProcessor:
 
     def _ensure_nltk_data(self):
         try:
-            nltk.data.find('tokenizers/punkt_tab')
+            nltk.data.find('tokenizers/punkt')
         except LookupError:
-            nltk.download('punkt_tab', quiet=True)            
+            nltk.download('punkt', quiet=True)            
         try:
             nltk.data.find('corpora/stopwords')
         except LookupError:
@@ -48,18 +48,6 @@ class OptimizedUrlProcessor:
         soup = BeautifulSoup(html, 'lxml')
         for script_or_style in soup(['script', 'style', 'head', 'meta', 'nav']):
             script_or_style.decompose()        
-class takeUrl:
-    def __init__(self):
-        pass
-    stop_words = set(stopwords.words('english'))    
-    def clean_html(self, soup):
-        body = soup.body
-        if body:
-            soup = BeautifulSoup(str(body), 'html.parser')
-        for script_or_style in soup(['script', 'style']):  # isn't
-
-            script_or_style.decompose()
-        
         return soup.get_text(separator=' ', strip=True)
 
     def extract_keywords(self, text: str) -> List[str]:
