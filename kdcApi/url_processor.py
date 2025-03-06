@@ -1,4 +1,5 @@
 import re
+<<<<<<< HEAD
 import requests
 from typing import Dict, List, Any
 from functools import lru_cache
@@ -71,6 +72,18 @@ class OptimizedUrlProcessor:
         
         # Remove scripts and styles more efficiently
         for script_or_style in soup(['script', 'style', 'head', 'meta', 'nav']):
+=======
+import pytrends
+class takeUrl:
+    def __init__(self):
+        pass
+    stop_words = set(stopwords.words('english'))    
+    def clean_html(self, soup):
+        body = soup.body
+        if body:
+            soup = BeautifulSoup(str(body), 'html.parser')
+        for script_or_style in soup(['script', 'style']):  # isn't
+>>>>>>> main
             script_or_style.decompose()
         
         return soup.get_text(separator=' ', strip=True)
