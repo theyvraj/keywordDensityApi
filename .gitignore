@@ -3,4 +3,5 @@ pyproject.toml
 .venv
 kdcApi/__pycache__/
 kdcApi/migrations/
-kwdc/__pycache__/c
+kwdc/__pycache__/
+kdcApi/__pycache__/
