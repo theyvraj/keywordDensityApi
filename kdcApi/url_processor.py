@@ -8,7 +8,6 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from collections import Counter
-
 class OptimizedUrlProcessor:
     def __init__(self, language: str = 'english', max_workers: int = 4):
         # Lazy loading of stopwords to improve initial load time
