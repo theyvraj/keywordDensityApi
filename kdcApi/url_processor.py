@@ -37,7 +37,8 @@ class OptimizedUrlProcessor:
     @lru_cache(maxsize=128)
     def fetch_url_content(self, url: str, timeout: int = 10) -> str:
         try:
-            response = self.session.get(url, timeout=timeout)
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = self.session.get(url, headers=headers, timeout=timeout)
             response.raise_for_status()
             return response.text
         except requests.RequestException as e:
