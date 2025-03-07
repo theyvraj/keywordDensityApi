@@ -8,7 +8,9 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from collections import Counter
-
+from pytrends.request import TrendReq
+import pandas as pd
+import time
 class OptimizedUrlProcessor:
     def __init__(self, language: str = 'english', max_workers: int = 4):
         self._stop_words = None
@@ -17,7 +19,7 @@ class OptimizedUrlProcessor:
         self.word_pattern = re.compile(r"\b[a-zA-Z]+'?[a-zA-Z]{1,}\b")        
         self.session = requests.Session()
         self._ensure_nltk_data()
-
+        self.pytrends = TrendReq(hl='en-US', tz=360, retries=2, backoff_factor=0.1)
     def _ensure_nltk_data(self):
         try:
             nltk.data.find('tokenizers/punkt')
@@ -27,7 +29,6 @@ class OptimizedUrlProcessor:
             nltk.data.find('corpora/stopwords')
         except LookupError:
             nltk.download('stopwords', quiet=True)
-
     @property
     def stop_words(self):
         if self._stop_words is None:
@@ -54,56 +55,123 @@ class OptimizedUrlProcessor:
     def extract_keywords(self, text: str) -> List[str]:
         words = word_tokenize(text.lower())
         words = [
-            word for word in words 
+            word for word in words
             if self.word_pattern.match(word) and word not in self.stop_words
-        ]        
+        ]
         return words
 
+    def get_interest_over_time(self, keywords: List[str], max_keywords: int = 5) -> Dict[str, float]:
+        if not keywords:
+            return {}        
+        keywords = keywords[:max_keywords]
+        result = {}        
+        try:
+            self.pytrends.build_payload(kw_list=keywords, timeframe='today 3-m', geo='US')
+            data = self.pytrends.interest_over_time()            
+            if data.empty:
+                return {keyword: 0.0 for keyword in keywords}                
+            if 'isPartial' in data.columns:
+                data = data.drop('isPartial', axis=1)                
+            averages = data.mean()            
+            for keyword in keywords:
+                if keyword in averages:
+                    result[keyword] = float(averages[keyword])
+                else:
+                    result[keyword] = 0.0                    
+        except Exception as e:
+            print(f"Error getting trends data: {e}")
+            result = {keyword: 0.0 for keyword in keywords}            
+        return result
     def get_phrases(self, words: List[str], n: int = 2) -> List[str]:
         return [' '.join(words[i:i+n]) for i in range(len(words)-n+1)]
 
     def process_url(self, url: str) -> Dict[str, Any]:
-        html = self.fetch_url_content(url)        
+        html = self.fetch_url_content(url)
         if not html:
-            return {}
-        cleaned_text = self.clean_html(html)
-        words = self.extract_keywords(cleaned_text)
+            return {"error": f"Failed to fetch content from {url}"}
+        
+        text = self.clean_html(html)
+        words = self.extract_keywords(text)
         
         total_words = len(words)
         if total_words == 0:
-            return {}
-        result = {
-            'one_word': self._get_keyword_stats(words, 1, total_words),
-            'two_word': self._get_keyword_stats(self.get_phrases(words, 2), 2, total_words),
-            'three_word': self._get_keyword_stats(self.get_phrases(words, 3), 3, total_words)
-        }        
-        return result
-
-    def _get_keyword_stats(self, items: List[str], n: int, total_words: int) -> List[Dict[str, Any]]:
-        return [
+            return {"error": "No valid words found in the content"}
+        one_word_counter = Counter(words)
+        one_word_stats = [
             {
-                'keyword': keyword,
-                'count': count,
-                'percentage': f"{(count / total_words) * 100:.2f}%"
+                "keyword": word,
+                "count": count,
+                "percentage": f"{(count / total_words) * 100:.2f}%"
             }
-            for keyword, count in Counter(items).most_common(10)
+            for word, count in one_word_counter.most_common(20)
         ]
-
-    def process_multiple_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
-        results = []
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            future_to_url = {
-                executor.submit(self.process_url, url): url 
-                for url in urls
+        
+        two_word_phrases = self.get_phrases(words, 2)
+        two_word_counter = Counter(two_word_phrases)
+        two_word_stats = [
+            {
+                "keyword": phrase,
+                "count": count,
+                "percentage": f"{(count / len(two_word_phrases) if two_word_phrases else 0) * 100:.2f}%"
             }
+            for phrase, count in two_word_counter.most_common(20)
+        ]
+        
+        three_word_phrases = self.get_phrases(words, 3)
+        three_word_counter = Counter(three_word_phrases)
+        three_word_stats = [
+            {
+                "keyword": phrase,
+                "count": count,
+                "percentage": f"{(count / len(three_word_phrases) if three_word_phrases else 0) * 100:.2f}%"
+            }
+            for phrase, count in three_word_counter.most_common(20)
+        ]        
+        one_word_keywords = [item['keyword'] for item in one_word_stats[:5]]
+        two_word_keywords = [item['keyword'] for item in two_word_stats[:5]]
+        three_word_keywords = [item['keyword'] for item in three_word_stats[:5]]        
+        one_word_interest = self.get_interest_over_time(one_word_keywords)
+        time.sleep(1) 
+        two_word_interest = self.get_interest_over_time(two_word_keywords)
+        time.sleep(1)  
+        three_word_interest = self.get_interest_over_time(three_word_keywords)
+        for item in one_word_stats:
+            keyword = item['keyword']
+            if keyword in one_word_interest:
+                item['interest_over_time'] = one_word_interest[keyword]
+            else:
+                item['interest_over_time'] = 0.0
+                
+        for item in two_word_stats:
+            keyword = item['keyword']
+            if keyword in two_word_interest:
+                item['interest_over_time'] = two_word_interest[keyword]
+            else:
+                item['interest_over_time'] = 0.0
+                
+        for item in three_word_stats:
+            keyword = item['keyword']
+            if keyword in three_word_interest:
+                item['interest_over_time'] = three_word_interest[keyword]
+            else:
+                item['interest_over_time'] = 0.0
+        
+        return {
+            "url": url,
+            "total_words": total_words,
+            "one_word": one_word_stats,
+            "two_word": two_word_stats,
+            "three_word": three_word_stats
+        }
+
+    def process_urls(self, urls: List[str]) -> Dict[str, Any]:
+        results = {}
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_url = {executor.submit(self.process_url, url): url for url in urls}
             for future in as_completed(future_to_url):
                 url = future_to_url[future]
                 try:
-                    result = future.result()
-                    results.append({
-                        'url': url,
-                        'data': result
-                    })
+                    results[url] = future.result()
                 except Exception as e:
-                    print(f"Error processing {url}: {e}")        
+                    results[url] = {"error": str(e)}
         return results
