@@ -1,5 +1,6 @@
 import re
 import requests
+import random
 from typing import Dict, List, Any
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -19,7 +20,10 @@ class OptimizedUrlProcessor:
         self.word_pattern = re.compile(r"\b[a-zA-Z]+'?[a-zA-Z]{1,}\b")        
         self.session = requests.Session()
         self._ensure_nltk_data()
-        self.pytrends = TrendReq(hl='en-US', tz=360, retries=2, backoff_factor=0.1)
+        try:
+            self.pytrends = TrendReq(hl='en-US', tz=360, timeout=(10,25), retries=2, backoff_factor=0.1)
+        except Exception as e:
+            print(f"Warning: Could not initialize Google Trends with default parameters: {e}")
     def _ensure_nltk_data(self):
         try:
             nltk.data.find('tokenizers/punkt')
@@ -38,8 +42,17 @@ class OptimizedUrlProcessor:
     @lru_cache(maxsize=128)
     def fetch_url_content(self, url: str, timeout: int = 10) -> str:
         try:
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
-            response = self.session.get(url, headers=headers, timeout=timeout)
+            user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15'
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15'
+        ]
+            randHeaders = {"User-Agent": random.choice(user_agents)}
+            response = self.session.get(url, headers=randHeaders, timeout=timeout)
             response.raise_for_status()
             return response.text
         except requests.RequestException as e:
@@ -64,23 +77,22 @@ class OptimizedUrlProcessor:
         if not keywords:
             return {}        
         keywords = keywords[:max_keywords]
-        result = {}        
+        result = {keyword: 0.0 for keyword in keywords}        
+        if self.pytrends is None:
+            return result            
         try:
             self.pytrends.build_payload(kw_list=keywords, timeframe='today 3-m', geo='US')
             data = self.pytrends.interest_over_time()            
             if data.empty:
-                return {keyword: 0.0 for keyword in keywords}                
+                return result               
             if 'isPartial' in data.columns:
                 data = data.drop('isPartial', axis=1)                
             averages = data.mean()            
             for keyword in keywords:
                 if keyword in averages:
                     result[keyword] = float(averages[keyword])
-                else:
-                    result[keyword] = 0.0                    
         except Exception as e:
-            print(f"Error getting trends data: {e}")
-            result = {keyword: 0.0 for keyword in keywords}            
+            print(f"Error getting trends data: {e}")        
         return result
     def get_phrases(self, words: List[str], n: int = 2) -> List[str]:
         return [' '.join(words[i:i+n]) for i in range(len(words)-n+1)]
@@ -127,9 +139,9 @@ class OptimizedUrlProcessor:
             }
             for phrase, count in three_word_counter.most_common(20)
         ]        
-        one_word_keywords = [item['keyword'] for item in one_word_stats[:5]]
-        two_word_keywords = [item['keyword'] for item in two_word_stats[:5]]
-        three_word_keywords = [item['keyword'] for item in three_word_stats[:5]]        
+        one_word_keywords = [item['keyword'] for item in one_word_stats]
+        two_word_keywords = [item['keyword'] for item in two_word_stats]
+        three_word_keywords = [item['keyword'] for item in three_word_stats]        
         one_word_interest = self.get_interest_over_time(one_word_keywords)
         time.sleep(1) 
         two_word_interest = self.get_interest_over_time(two_word_keywords)

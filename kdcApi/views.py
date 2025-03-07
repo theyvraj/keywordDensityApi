@@ -22,14 +22,14 @@ def process_url(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def process_multiple_urls(request):
+def process_urls(request):
     try:
         data = json.loads(request.body)
         urls = data.get('urls')
         if not urls:
             return JsonResponse({'error': 'URLs are required'}, status=400)
         
-        results = processor.process_multiple_urls(urls)
+        results = processor.process_urls(urls)
         return JsonResponse(results, safe=False)
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
