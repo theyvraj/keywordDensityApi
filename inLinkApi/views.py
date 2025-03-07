@@ -12,6 +12,6 @@ def crawl_website_view(request):
             return JsonResponse({'error': 'start_url is required'}, status=400)
         
         sitemap = crawl_website(start_url)
-        return JsonResponse({'sitemap': list(sitemap)}, status=200)
+        return JsonResponse({'interal links': list(sitemap)}, status=200)
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)

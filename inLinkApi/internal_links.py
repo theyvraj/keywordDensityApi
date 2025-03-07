@@ -99,13 +99,6 @@ def crawl_website(start_url, num_threads=10):
 
     return sitemap
 
-def save_sitemap(sitemap, filename="sitemap.txt"):
-    """Save the generated sitemap to a file."""
-    with open(filename, "w") as file:
-        for url in sorted(sitemap):
-            file.write(url + "\n")
-    print(f"Sitemap saved to {filename}")
-
 if __name__ == "__main__":
     website_url = input("Enter website URL: ")
     start_time = time.time()
