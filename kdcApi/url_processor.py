@@ -20,8 +20,22 @@ class OptimizedUrlProcessor:
         self.word_pattern = re.compile(r"\b[a-zA-Z]+'?[a-zA-Z]{1,}\b")        
         self.session = requests.Session()
         self._ensure_nltk_data()
+        
+        # Define the proxy
+        #self.proxies = ['https://38.154.227.167:5868', 'https://38.153.152.244:9594']
+        #selected_proxy = random.choice(self.proxies)
+        #proxy_dict = {'https': selected_proxy}
+        
         try:
-            self.pytrends = TrendReq(hl='en-US', tz=360, timeout=(10,25), retries=2, backoff_factor=0.1)
+            # Pass the proxy to TrendReq via requests_args
+            self.pytrends = TrendReq(
+                hl='en-US', 
+                tz=360, 
+                timeout=(10, 25), 
+                retries=2, 
+                backoff_factor=0.1, 
+                #requests_args={'proxies': proxy_dict}
+            )
         except Exception as e:
             print(f"Warning: Could not initialize Google Trends with default parameters: {e}")
     def _ensure_nltk_data(self):
@@ -169,7 +183,6 @@ class OptimizedUrlProcessor:
                 item['interest_over_time'] = 0.0
         
         return {
-            "url": url,
             "total_words": total_words,
             "one_word": one_word_stats,
             "two_word": two_word_stats,
