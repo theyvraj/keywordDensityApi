@@ -141,6 +141,7 @@ dependencies = [
     { name = "nltk" },
     { name = "pytrends" },
     { name = "requests" },
+    { name = "urllib3" },
 ]
 
 [package.metadata]
@@ -152,6 +153,7 @@ requires-dist = [
     { name = "nltk", specifier = ">=3.9.1" },
     { name = "pytrends", specifier = ">=4.9.2" },
     { name = "requests", specifier = ">=2.32.3" },
+    { name = "urllib3", specifier = ">2" },
 ]
 
 [[package]]
