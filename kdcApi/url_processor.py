@@ -27,14 +27,12 @@ class OptimizedUrlProcessor:
         #proxy_dict = {'https': selected_proxy}
         
         try:
-            # Pass the proxy to TrendReq via requests_args
             self.pytrends = TrendReq(
                 hl='en-US', 
                 tz=360, 
                 timeout=(10, 25), 
                 retries=2, 
                 backoff_factor=0.1, 
-                #requests_args={'proxies': proxy_dict}
             )
         except Exception as e:
             print(f"Warning: Could not initialize Google Trends with default parameters: {e}")
@@ -104,7 +102,7 @@ class OptimizedUrlProcessor:
             averages = data.mean()            
             for keyword in keywords:
                 if keyword in averages:
-                    result[keyword] = float(averages[keyword])
+                    result[keyword] = round(float(averages[keyword]), 2)
         except Exception as e:
             print(f"Error getting trends data: {e}")        
         return result
